@@ -4,6 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from elevator_ui import Ui_MainWindow
 from about_ui import Ui_Dialog
 from threading import Thread
+from queue import PriorityQueue as pq
 import queue
 
 
@@ -67,7 +68,6 @@ class Elevator(object):
     def __init__(self, id: int) -> None:
         self.id = id
         self.currentFloor = 1
-        from queue import PriorityQueue as pq
         self.stops = pq()
         self.passengers = []
         self.direction = Direction.IDLE
@@ -76,9 +76,8 @@ class Elevator(object):
     def reset(self):
         self.currentFloor = 1
         self.direction = Direction.IDLE
-        self.stops = []
+        self.stops = pq()
         self.passengers = []
-        self.passengerID = 1
 
     def addPassenger(self, passenger: Passenger):
         self.passengers.append(passenger)
@@ -154,6 +153,7 @@ class ElevatorSystem(object):
         for elevator in self.elevators:
             if (elevator.currentFloor-passenger.currentFloor)*elevator.direction.value <= 0:
                 sameDirectionElevators.append(elevator)
+
         if not sameDirectionElevators:
             return self.elevators[0].id
         else:
@@ -172,7 +172,6 @@ class ElevatorSystem(object):
         chooseElevatorThread.join()
         elevatorID = chooseElevatorThread.queue.get()
         self.elevators[elevatorID-1].addPassenger(passenger)
-        self.printPassengers()
 
     def listenResetButton(self):
         self.ui.resetButton.clicked.connect(self.reset)
