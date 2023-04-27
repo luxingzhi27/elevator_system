@@ -4,6 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from elevator_ui import Ui_MainWindow
 from about_ui import Ui_Dialog
 from threading import Thread
+import queue
 
 
 class Ui_UpdateAddPassengerDialog(Ui_DialogAddPassenger):
@@ -32,6 +33,28 @@ class Direction(Enum):
     IDLE = 0
 
 
+class ChooseELevatorThread(Thread):
+    def __init__(self, func, queue:queue.Queue, args=()) -> None:
+        super(ChooseELevatorThread,self).__init__()
+        self.func = func
+        self.args = args
+        self.queue = queue
+
+    def run(self) -> None:
+        self.result = self.func(*self.args)
+        self.queue.put(self.result)
+
+class ELevatorRunThread(Thread):
+    def __init__(self,func,args=()) -> None:
+        super(ELevatorRunThread,self).__init__()
+        self.func = func
+        self.args = args
+
+    def run(self) -> None:
+        self.func(*self.args)
+
+
+
 class Passenger(object):
     def __init__(self, id: int, currentFloor: int, direction: Direction) -> None:
         self.id = id
@@ -44,14 +67,15 @@ class Elevator(object):
     def __init__(self, id: int) -> None:
         self.id = id
         self.currentFloor = 1
-        self.direction = Direction.UP
         from queue import PriorityQueue as pq
         self.stops = pq()
         self.passengers = []
+        self.direction = Direction.IDLE
+
 
     def reset(self):
         self.currentFloor = 1
-        self.direction = Direction.UP
+        self.direction = Direction.IDLE
         self.stops = []
         self.passengers = []
         self.passengerID = 1
@@ -74,6 +98,10 @@ class Elevator(object):
             return False
         self.currentFloor -= 1
         return True
+
+    def autoRun(self):
+        """according to the stops, run the elevator"""
+
 
 
 class ElevatorSystem(object):
@@ -138,7 +166,12 @@ class ElevatorSystem(object):
         self.passengers.append(
             passenger)
         self.passengerID += 1
-        eleID = self.chooseElevator(passenger)
+        chooseElevatorThread = ChooseELevatorThread(self.chooseElevator, args=(
+            passenger,), queue=queue.Queue())
+        chooseElevatorThread.start()
+        chooseElevatorThread.join()
+        elevatorID = chooseElevatorThread.queue.get()
+        self.elevators[elevatorID-1].addPassenger(passenger)
         self.printPassengers()
 
     def listenResetButton(self):
@@ -171,7 +204,7 @@ class ElevatorSystem(object):
     def testElevator(self):
         """test elevatpors running
         """
-        while self.testElevatorRunning:
+        for i in range(1,2):
             while self.elevatorUp(1):
                 import time
                 time.sleep(1)
