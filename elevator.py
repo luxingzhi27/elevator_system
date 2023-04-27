@@ -32,7 +32,7 @@ class Direction(Enum):
     IDLE = 0
 
 
-class Passenger():
+class Passenger(object):
     def __init__(self, id: int, currentFloor: int, direction: Direction) -> None:
         self.id = id
         self.currentFloor = currentFloor
@@ -40,7 +40,7 @@ class Passenger():
         self.aimFloor = 1
 
 
-class Elevator():
+class Elevator(object):
     def __init__(self, id: int) -> None:
         self.id = id
         self.currentFloor = 1
@@ -76,7 +76,7 @@ class Elevator():
         return True
 
 
-class ElevatorSystem():
+class ElevatorSystem(object):
     def __init__(self) -> None:
         self.elevatorNum = 5
         self.elevators = [Elevator(1), Elevator(2),
