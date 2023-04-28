@@ -17,16 +17,16 @@ class Direction(Enum):
 
 
 class ChooseELevatorThread(Thread):
-    def __init__(self, func, queue:queue.Queue, args=()) -> None:
-        super(ChooseELevatorThread,self).__init__()
+    def __init__(self, func, queue: queue.Queue, args=()) -> None:
+        super(ChooseELevatorThread, self).__init__()
         self.func = func
         self.args = args
         self.queue = queue
+        self.result = None
 
     def run(self) -> None:
         self.result = self.func(*self.args)
         self.queue.put(self.result)
-
 
 
 class Passenger(object):
@@ -43,9 +43,8 @@ class Elevator(object):
         self.currentFloor = 1
         self.stops = pq()
         self.passengers = []
-        self.nextPassengers = [] # passengers who will get on the elevator
+        self.nextPassengers = []  # passengers who will get on the elevator
         self.direction = Direction.IDLE
-
 
     def reset(self):
         self.currentFloor = 1
@@ -74,9 +73,6 @@ class Elevator(object):
         return True
 
 
-
-
-
 class ElevatorSystem(object):
     def __init__(self) -> None:
         self.elevatorNum = 5
@@ -91,6 +87,7 @@ class ElevatorSystem(object):
         self.ui.setupUi(self.mainWindow)
         self.reset()
         self.updateUi()
+        self.autoRun()
 
     def updateUi(self):
         self.listenResetButton()
@@ -145,6 +142,7 @@ class ElevatorSystem(object):
         chooseElevatorThread.start()
         chooseElevatorThread.join()
         elevatorID = chooseElevatorThread.queue.get()
+        print(elevatorID)
         self.elevators[elevatorID-1].stops.put(passenger.aimFloor)
         self.elevators[elevatorID-1].nextPassengers.append(passenger)
 
@@ -158,11 +156,16 @@ class ElevatorSystem(object):
         self.ui.aboutButton.clicked.connect(self.handleAbout)
 
     def listenEnterButton(self):
-        self.ui.elevator1EnterButton.clicked.connect(lambda: self.handleEnterButton(1))
-        self.ui.elevator2EnterButton.clicked.connect(lambda:self.handleEnterButton(2))
-        self.ui.elevator3EnterButton.clicked.connect(lambda: self.handleEnterButton(3))
-        self.ui.elevator4EnterButton.clicked.connect(lambda: self.handleEnterButton(4))
-        self.ui.elevator5EnterButton.clicked.connect(lambda:self.handleEnterButton(5))
+        self.ui.elevator1EnterButton.clicked.connect(
+            lambda: self.handleEnterButton(1))
+        self.ui.elevator2EnterButton.clicked.connect(
+            lambda: self.handleEnterButton(2))
+        self.ui.elevator3EnterButton.clicked.connect(
+            lambda: self.handleEnterButton(3))
+        self.ui.elevator4EnterButton.clicked.connect(
+            lambda: self.handleEnterButton(4))
+        self.ui.elevator5EnterButton.clicked.connect(
+            lambda: self.handleEnterButton(5))
 
     def handleAbout(self):
         aboutDialog = QtWidgets.QDialog()
@@ -176,15 +179,14 @@ class ElevatorSystem(object):
         addPassengerUi.setupUi(addPassengerDialog)
         addPassengerDialog.exec_()
         # print(addPassengerUi.currentFloor, addPassengerUi.direction)
-        currentFloor=int(addPassengerUi.comboBox.currentText())
-        direction=Direction.IDLE
+        currentFloor = int(addPassengerUi.comboBox.currentText())
+        direction = Direction.IDLE
         if addPassengerUi.comboBox_2.currentText() == "up":
             direction = Direction.UP
-        elif addPassengerUi.comboBox_2.currentText()== "down":
+        elif addPassengerUi.comboBox_2.currentText() == "down":
             direction = Direction.DOWN
         print(currentFloor, direction)
-        self.addPassenger(currentFloor , direction)
-
+        self.addPassenger(currentFloor, direction)
 
     def printPassengers(self):
         for passenger in self.passengers:
@@ -193,7 +195,7 @@ class ElevatorSystem(object):
     def testElevator(self):
         """test elevatpors running
         """
-        for i in range(1,2):
+        for i in range(1, 2):
             while self.elevatorUp(1):
                 import time
                 time.sleep(1)
@@ -201,6 +203,15 @@ class ElevatorSystem(object):
             while self.elevatorDown(1):
                 import time
                 time.sleep(1)
+
+    def checkOpen(self, eleID: int) -> bool:
+        """check whether the elevator need to open
+        """
+        elevator = self.elevators[eleID-1]
+        for stop in elevator.stops.queue:
+            if elevator.currentFloor == stop:
+                return True
+        return False
 
     def elevatorUp(self, eleID: int) -> bool:
         if self.elevators[eleID-1].up():   # id begin with 1
@@ -290,43 +301,53 @@ class ElevatorSystem(object):
                 return True
         return False
 
-    def elevatorOpen(self,eleID:int):
+    def elevatorOpen(self, eleID: int):
         if eleID == 1:
             self.ui.elevator1OpenButton.setStyleSheet(
                 "QPushButton{color: green}")
             self.ui.elevator1EnterButton.setDisabled(False)
-        elif eleID ==2:
-            self.ui.elevator2OpenButton.setStyleSheet("QPushButton{color: green}")
+        elif eleID == 2:
+            self.ui.elevator2OpenButton.setStyleSheet(
+                "QPushButton{color: green}")
             self.ui.elevator2EnterButton.setDisabled(False)
-        elif eleID ==3:
-            self.ui.elevator3OpenButton.setStyleSheet("QPushButton{color: green}")
+        elif eleID == 3:
+            self.ui.elevator3OpenButton.setStyleSheet(
+                "QPushButton{color: green}")
             self.ui.elevator3EnterButton.setDisabled(False)
-        elif eleID ==4:
-            self.ui.elevator4OpenButton.setStyleSheet("QPushButton{color: green}")
+        elif eleID == 4:
+            self.ui.elevator4OpenButton.setStyleSheet(
+                "QPushButton{color: green}")
             self.ui.elevator4EnterButton.setDisabled(False)
-        elif eleID ==5:
-            self.ui.elevator5OpenButton.setStyleSheet("QPushButton{color: green}")
+        elif eleID == 5:
+            self.ui.elevator5OpenButton.setStyleSheet(
+                "QPushButton{color: green}")
             self.ui.elevator5EnterButton.setDisabled(False)
         else:
             print("elevatorOpen error")
 
-    def handleEnterButton(self, eleID:int):
+    def handleEnterButton(self, eleID: int):
         getAimFloorDialog = QtWidgets.QDialog()
         ui = Ui_DialogGetAimFloor()
         ui.setupUi(getAimFloorDialog)
         getAimFloorDialog.exec_()
-        elevator=self.elevators[eleID-1]
+        elevator = self.elevators[eleID-1]
         for passenger in elevator.nextPassengers:
-            if passenger.currentFloor==elevator.currentFloor:
+            if passenger.currentFloor == elevator.currentFloor:
                 elevator.nextPassengers.remove(passenger)
-                passenger.aimFloor=int(ui.comboBox.currentText())
+                passenger.aimFloor = int(ui.comboBox.currentText())
                 elevator.addPassenger(passenger)
                 elevator.passengers = list(
                     filter(lambda x: x.aimFloor != elevator.currentFloor, elevator.passengers))
 
-
     def autoRun(self):
         for elevator in self.elevators:
+            elevatorRunThread = threading.Thread(
+                target=self.elevatorRun, args=(elevator.id,))
+            elevatorRunThread.start()
+
+    def elevatorRun(self, eleID: int):
+        while True:
+            elevator = self.elevators[eleID-1]
             if elevator.stops.empty():
                 elevator.direction = Direction.IDLE
                 return
@@ -335,13 +356,17 @@ class ElevatorSystem(object):
                     elevator.direction = Direction.UP
                 elif elevator.stops.queue[len(elevator.stops.queue)-1] <= elevator.currentFloor:
                     elevator.direction = Direction.DOWN
-                elif elevator.stops.queue[0] <elevator.currentFloor<elevator.stops.queue[len(elevator.stops.queue)-1]:
-                    elevator.direction= Direction.UP if (elevator.currentFloor-elevator.stops.queue[0])>=elevator.stops.queue[len(elevator.stops.queue)-1]-elevator.currentFloor else Direction.DOWN
+                elif elevator.stops.queue[0] < elevator.currentFloor < elevator.stops.queue[len(elevator.stops.queue)-1]:
+                    elevator.direction = Direction.UP if (elevator.currentFloor-elevator.stops.queue[0]) >= elevator.stops.queue[len(
+                        elevator.stops.queue)-1]-elevator.currentFloor else Direction.DOWN
             if elevator.direction == Direction.UP and elevator.currentFloor <= elevator.stops.queue[len(elevator.stops.queue)-1]:
+                if self.checkOpen(elevator.id):
+                    self.elevatorOpen(elevator.id)
                 self.elevatorUp(elevator.id)
             if elevator.direction == Direction.DOWN and elevator.currentFloor >= elevator.stops.queue[0]:
+                if self.checkOpen(elevator.id):
+                    self.elevatorOpen(elevator.id)
                 self.elevatorDown(elevator.id)
-
 
 
 if __name__ == '__main__':
